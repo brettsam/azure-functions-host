@@ -15,6 +15,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public const string SystemExecutionContextParameterName = "_context";
         public const string SystemLogParameterName = "_log";
         public const string SystemBinderParameterName = "_binder";
+        public const string SystemCancellationTokenParameterName = "_cancellationToken";
 
         public const string HostMetadataFileName = "host.json";
         internal const string FunctionMetadataFileName = "function.json";

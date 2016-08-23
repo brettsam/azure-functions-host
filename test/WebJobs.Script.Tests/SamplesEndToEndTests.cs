@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -376,6 +377,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             // verify the function output
             var logs = await TestHelpers.GetFunctionLogsAsync("QueueTrigger-Python");
+            // strip off the timestamps from the beginning of each line
+            logs = logs.Select(l => l.Split(new[] { ' ' }, 2)[1]).ToList();
             int idx = logs.IndexOf("Read 5 Table entities");
             for (int i = idx + 1; i < 5; i++)
             {

@@ -22,7 +22,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
         {
         }
 
-        public override Task Invoke(object[] parameters)
+        public override Task InvokeInternal(object[] parameters)
         {
             throw new System.NotImplementedException();
         }

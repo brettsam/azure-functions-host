@@ -52,6 +52,8 @@ namespace Microsoft.Azure.WebJobs.Script
 
         public event EventHandler IsPrimaryChanged;
 
+        public event EventHandler FunctionTimeout;
+
         public string InstanceId
         {
             get
@@ -302,7 +304,7 @@ namespace Microsoft.Azure.WebJobs.Script
                 _blobLeaseManager = BlobLeaseManager.Create(storageString, TimeSpan.FromSeconds(15), ScriptConfig.HostConfig.HostId, InstanceId, TraceWriter);
                 _blobLeaseManager.HasLeaseChanged += BlobLeaseManagerHasLeaseChanged;
             }
-                      
+
             List<FunctionDescriptorProvider> descriptionProviders = new List<FunctionDescriptorProvider>()
             {
                 new ScriptFunctionDescriptorProvider(this, ScriptConfig),
@@ -580,7 +582,7 @@ namespace Microsoft.Azure.WebJobs.Script
                     string scriptFile = DeterminePrimaryScriptFile(functionConfig, functionFiles);
                     if (string.IsNullOrEmpty(scriptFile))
                     {
-                        AddFunctionError(functionName, 
+                        AddFunctionError(functionName,
                             "Unable to determine the primary function script. Try renaming your entry point script to 'run' (or 'index' in the case of Node), " +
                             "or alternatively you can specify the name of the entry point script explicitly by adding a 'scriptFile' property to your function metadata.");
                         continue;
@@ -637,7 +639,7 @@ namespace Microsoft.Azure.WebJobs.Script
                 {
                     // if there is a "run" file, that file is primary,
                     // for Node, any index.js file is primary
-                    functionPrimary = functionFiles.FirstOrDefault(p => 
+                    functionPrimary = functionFiles.FirstOrDefault(p =>
                         Path.GetFileNameWithoutExtension(p).ToLowerInvariant() == "run" ||
                         Path.GetFileName(p).ToLowerInvariant() == "index.js");
                 }
@@ -786,6 +788,11 @@ namespace Microsoft.Azure.WebJobs.Script
                     }
                 }
             }
+
+            if (config.TryGetValue("timeout", out value))
+            {
+                hostConfig.FunctionTimeout = TimeSpan.Parse((string)value, CultureInfo.InvariantCulture);
+            }
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -839,6 +846,19 @@ namespace Microsoft.Azure.WebJobs.Script
                 // Mark the error as handled so indexing will continue
                 indexingException.Handled = true;
             }
+            else if (exception is OperationCanceledException)
+            {
+                FunctionDescriptor function = null;
+                if (TryGetFunctionFromException(Functions, exception, out function))
+                {
+                    NotifyInvoker(function.Name, exception);
+                }
+
+                if ((bool)exception.Data["FunctionTimeout"])
+                {
+                    RaiseFunctionTimeout();
+                }
+            }
             else
             {
                 // See if we can identify which function caused the error, and if we can
@@ -849,6 +869,11 @@ namespace Microsoft.Azure.WebJobs.Script
                     NotifyInvoker(function.Name, exception);
                 }
             }
+        }
+
+        private void RaiseFunctionTimeout()
+        {
+            FunctionTimeout?.Invoke(this, EventArgs.Empty);
         }
 
         internal static bool TryGetFunctionFromException(Collection<FunctionDescriptor> functions, Exception exception, out FunctionDescriptor function)

@@ -15,7 +15,6 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Bindings.Runtime;
 using Microsoft.Azure.WebJobs.Script.Binding;
 using Microsoft.Azure.WebJobs.Script.Description.PowerShell;
-using Microsoft.Azure.WebJobs.Script.Diagnostics;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
@@ -28,13 +27,12 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         private readonly Collection<FunctionBinding> _inputBindings;
         private readonly Collection<FunctionBinding> _outputBindings;
-        private readonly IMetricsLogger _metrics;
 
         private string _script;
         private List<string> _moduleFiles;
 
         internal PowerShellFunctionInvoker(ScriptHost host, FunctionMetadata functionMetadata,
-            Collection<FunctionBinding> inputBindings, Collection<FunctionBinding> outputBindings, ITraceWriterFactory traceWriterFactory = null) 
+            Collection<FunctionBinding> inputBindings, Collection<FunctionBinding> outputBindings, ITraceWriterFactory traceWriterFactory = null)
             : base(host, functionMetadata, traceWriterFactory)
         {
             _host = host;
@@ -42,10 +40,9 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             _functionName = functionMetadata.Name;
             _inputBindings = inputBindings;
             _outputBindings = outputBindings;
-            _metrics = host.ScriptConfig.HostConfig.GetService<IMetricsLogger>();
         }
 
-        public override async Task Invoke(object[] parameters)
+        public override async Task InvokeInternal(object[] parameters)
         {
             // TODO: Refactor common code for providers.
             object input = parameters[0];
@@ -54,51 +51,26 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             ExecutionContext functionExecutionContext = (ExecutionContext)parameters[3];
             string invocationId = functionExecutionContext.InvocationId.ToString();
 
-            FunctionStartedEvent startedEvent = new FunctionStartedEvent(functionExecutionContext.InvocationId, Metadata);
-            _metrics.BeginEvent(startedEvent);
+            object convertedInput = ConvertInput(input);
+            Utility.ApplyBindingData(convertedInput, binder.BindingData);
+            Dictionary<string, object> bindingData = binder.BindingData;
+            bindingData["InvocationId"] = invocationId;
 
-            try
+            Dictionary<string, string> environmentVariables = new Dictionary<string, string>();
+
+            string functionInstanceOutputPath = Path.Combine(Path.GetTempPath(), "Functions", "Binding", invocationId);
+            await ProcessInputBindingsAsync(convertedInput, functionInstanceOutputPath, binder, _inputBindings, _outputBindings, bindingData, environmentVariables);
+
+            InitializeEnvironmentVariables(environmentVariables, functionInstanceOutputPath, input, _outputBindings, functionExecutionContext);
+
+            PSDataCollection<ErrorRecord> errors = await InvokePowerShellScript(environmentVariables, traceWriter);
+
+            await ProcessOutputBindingsAsync(functionInstanceOutputPath, _outputBindings, input, binder, bindingData);
+
+            ErrorRecord error = errors.FirstOrDefault();
+            if (error != null)
             {
-                TraceWriter.Info(string.Format("Function started (Id={0})", invocationId));
-
-                object convertedInput = ConvertInput(input);
-                Utility.ApplyBindingData(convertedInput, binder.BindingData);
-                Dictionary<string, object> bindingData = binder.BindingData;
-                bindingData["InvocationId"] = invocationId;
-
-                Dictionary<string, string> environmentVariables = new Dictionary<string, string>();
-
-                string functionInstanceOutputPath = Path.Combine(Path.GetTempPath(), "Functions", "Binding", invocationId);
-                await ProcessInputBindingsAsync(convertedInput, functionInstanceOutputPath, binder, _inputBindings, _outputBindings, bindingData, environmentVariables);
-
-                InitializeEnvironmentVariables(environmentVariables, functionInstanceOutputPath, input, _outputBindings, functionExecutionContext);
-
-                PSDataCollection<ErrorRecord> errors = await InvokePowerShellScript(environmentVariables, traceWriter);
-
-                await ProcessOutputBindingsAsync(functionInstanceOutputPath, _outputBindings, input, binder, bindingData);
-
-                if (errors.Any())
-                {
-                    ErrorRecord error = errors.FirstOrDefault();
-                    if (error != null)
-                    {
-                        throw new RuntimeException("PowerShell script error", error.Exception, error);
-                    }
-                }
-                else
-                {
-                    TraceWriter.Info(string.Format("Function completed (Success, Id={0})", invocationId));
-                }
-            }
-            catch (Exception)
-            {
-                startedEvent.Success = false;
-                TraceWriter.Error(string.Format("Function completed (Failure, Id={0})", invocationId));
-                throw;
-            }
-            finally
-            {
-                _metrics.EndEvent(startedEvent);
+                throw new RuntimeException("PowerShell script error", error.Exception, error);
             }
         }
 

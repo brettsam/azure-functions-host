@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Binding;
 using Microsoft.Azure.WebJobs.Script.Extensibility;
@@ -69,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             }
         }
 
-        protected virtual Collection<ParameterDescriptor> GetFunctionParameters(IFunctionInvoker functionInvoker, FunctionMetadata functionMetadata, 
+        protected virtual Collection<ParameterDescriptor> GetFunctionParameters(IFunctionInvoker functionInvoker, FunctionMetadata functionMetadata,
             BindingMetadata triggerMetadata, Collection<CustomAttributeBuilder> methodAttributes, Collection<FunctionBinding> inputBindings, Collection<FunctionBinding> outputBindings)
         {
             if (functionInvoker == null)
@@ -103,6 +103,9 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
             // Add ExecutionContext to provide access to InvocationId, etc.
             parameters.Add(new ParameterDescriptor(ScriptConstants.SystemExecutionContextParameterName, typeof(ExecutionContext)));
+
+            // Add the CancellationToken. We need this to ensure we can cancel even if the Function hasn't requested it.
+            parameters.Add(new ParameterDescriptor(ScriptConstants.SystemCancellationTokenParameterName, typeof(CancellationToken)));
 
             return parameters;
         }

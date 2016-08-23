@@ -336,6 +336,7 @@
     <Compile Include="FunctionGeneratorTests.cs" />
     <Compile Include="Description\DotNet\CSharp\PackageAssemblyResolverTests.cs" />
     <Compile Include="MetricsEventManagerTests.cs" />
+    <Compile Include="EndToEndTimeoutTests.cs" />
     <Compile Include="PowerShellInvokerTests.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -383,6 +384,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="TestScripts\Bash\QueueTriggerToBlob\run.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\Bash\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\Bash\TimeoutSync\run.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="TestScripts\CSharp\ApiHubTableClient\function.json">
@@ -586,6 +593,18 @@
     <None Include="TestScripts\FSharp\MobileTableTable\run.fsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="TestScripts\CSharp\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\CSharp\TimeoutSync\run.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\CSharp\TimeoutToken\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\CSharp\TimeoutToken\run.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="TestScripts\FSharp\host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -730,6 +749,9 @@
     <None Include="TestScripts\Node\TableOut\function.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="TestScripts\Node\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="TestScripts\Node\WebHookTrigger\function.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -772,12 +794,24 @@
     <None Include="TestScripts\PowerShell\QueueTriggerToBlob\run.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="TestScripts\PowerShell\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\PowerShell\TimeoutSync\run.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="TestScripts\Python\host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="TestScripts\Python\QueueTriggerToBlob\function.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="TestScripts\Python\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <Content Include="TestScripts\Python\TimeoutSync\run.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="TestScripts\WindowsBatch\host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -797,6 +831,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="TestScripts\Node\TimerTrigger\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\WindowsBatch\TimeoutSync\function.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestScripts\WindowsBatch\TimeoutSync\run.bat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="TestScripts\WindowsBatch\WebHookTrigger\function.json">
@@ -853,6 +893,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestScripts\Node\TableOut\index.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestScripts\Node\TimeoutSync\index.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestScripts\Node\TimerTrigger\index.js">
