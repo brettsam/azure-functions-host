@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using EdgeJs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Binding;
-using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -31,7 +30,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
         private readonly string _script;
         private readonly DictionaryJsonConverter _dictionaryJsonConverter = new DictionaryJsonConverter();
         private readonly BindingMetadata _trigger;
-        private readonly IMetricsLogger _metrics;
         private readonly string _entryPoint;
 
         private Func<object, Task<object>> _scriptFunc;
@@ -59,7 +57,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             _script = string.Format(CultureInfo.InvariantCulture, _functionTemplate, scriptFilePath);
             _inputBindings = inputBindings;
             _outputBindings = outputBindings;
-            _metrics = host.ScriptConfig.HostConfig.GetService<IMetricsLogger>();
             _entryPoint = functionMetadata.EntryPoint;
 
             InitializeFileWatcherIfEnabled();
@@ -110,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             }
         }
 
-        public override async Task Invoke(object[] parameters)
+        public override async Task InvokeInternal(object[] parameters)
         {
             object input = parameters[0];
             TraceWriter traceWriter = (TraceWriter)parameters[1];
@@ -118,36 +115,16 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             ExecutionContext functionExecutionContext = (ExecutionContext)parameters[3];
             string invocationId = functionExecutionContext.InvocationId.ToString();
 
-            FunctionStartedEvent startedEvent = new FunctionStartedEvent(functionExecutionContext.InvocationId, Metadata);
-            _metrics.BeginEvent(startedEvent);
+            DataType dataType = _trigger.DataType ?? DataType.String;
+            var scriptExecutionContext = CreateScriptExecutionContext(input, dataType, binder, traceWriter, TraceWriter, functionExecutionContext);
+            var bindingData = (Dictionary<string, object>)scriptExecutionContext["bindingData"];
+            bindingData["InvocationId"] = invocationId;
 
-            try
-            {
-                TraceWriter.Info(string.Format("Function started (Id={0})", invocationId));
+            await ProcessInputBindingsAsync(binder, scriptExecutionContext, bindingData);
 
-                DataType dataType = _trigger.DataType ?? DataType.String;
-                var scriptExecutionContext = CreateScriptExecutionContext(input, dataType, binder, traceWriter, TraceWriter, functionExecutionContext);
-                var bindingData = (Dictionary<string, object>)scriptExecutionContext["bindingData"];
-                bindingData["InvocationId"] = invocationId;
+            object functionResult = await ScriptFunc(scriptExecutionContext);
 
-                await ProcessInputBindingsAsync(binder, scriptExecutionContext, bindingData);
-
-                object functionResult = await ScriptFunc(scriptExecutionContext);
-
-                await ProcessOutputBindingsAsync(_outputBindings, input, binder, bindingData, scriptExecutionContext, functionResult);
-
-                TraceWriter.Info(string.Format("Function completed (Success, Id={0})", invocationId));
-            }
-            catch
-            {
-                startedEvent.Success = false;
-                TraceWriter.Error(string.Format("Function completed (Failure, Id={0})", invocationId));
-                throw;
-            }
-            finally
-            {
-                _metrics.EndEvent(startedEvent);
-            }
+            await ProcessOutputBindingsAsync(_outputBindings, input, binder, bindingData, scriptExecutionContext, functionResult);
         }
 
         private async Task ProcessInputBindingsAsync(Binder binder, Dictionary<string, object> executionContext, Dictionary<string, object> bindingData)
@@ -187,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             executionContext["inputs"] = inputs;
         }
 
-        private static async Task ProcessOutputBindingsAsync(Collection<FunctionBinding> outputBindings, object input, Binder binder, 
+        private static async Task ProcessOutputBindingsAsync(Collection<FunctionBinding> outputBindings, object input, Binder binder,
             Dictionary<string, object> bindingData, Dictionary<string, object> scriptExecutionContext, object functionResult)
         {
             if (outputBindings == null)
@@ -264,7 +241,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 {
                     traceWriter.Info(text);
                     fileTraceWriter.Info(text);
-                } 
+                }
 
                 return Task.FromResult<object>(null);
             });
@@ -369,10 +346,10 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         private static bool IsEdgeSupportedType(Type type)
         {
-            if (type == typeof(int) || 
-                type == typeof(double) || 
-                type == typeof(string) || 
-                type == typeof(bool) || 
+            if (type == typeof(int) ||
+                type == typeof(double) ||
+                type == typeof(string) ||
+                type == typeof(bool) ||
                 type == typeof(byte[]) ||
                 type == typeof(object[]))
             {

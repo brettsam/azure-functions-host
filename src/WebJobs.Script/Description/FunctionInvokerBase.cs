@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
-using Newtonsoft.Json.Linq;
+using Microsoft.Azure.WebJobs.Script.Diagnostics;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
@@ -19,6 +21,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         private FileSystemWatcher _fileWatcher;
         private bool _disposed = false;
+        private IMetricsLogger _metrics;
 
         internal FunctionInvokerBase(ScriptHost host, FunctionMetadata functionMetadata, ITraceWriterFactory traceWriterFactory = null)
         {
@@ -30,6 +33,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
             // Function file logging is only done conditionally
             TraceWriter = traceWriter.Conditional(t => Host.FileLoggingEnabled && (!(t.Properties?.ContainsKey(PrimaryHostTracePropertyName) ?? false) || Host.IsPrimary));
+            _metrics = host.ScriptConfig.HostConfig.GetService<IMetricsLogger>();
         }
 
         protected static IDictionary<string, object> PrimaryHostTraceProperties => _primaryHostTraceProperties;
@@ -81,7 +85,112 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             return false;
         }
 
-        public abstract Task Invoke(object[] parameters);
+        public Task Invoke(object[] parameters)
+        {
+            FunctionStartedEvent startedEvent = null;
+            Task invokeTask = null;
+
+            CancellationToken timeoutOrShutdownToken = (CancellationToken)parameters.First(p => p?.GetType() == typeof(CancellationToken));
+            ExecutionContext functionExecutionContext = (ExecutionContext)parameters.First(p => p?.GetType() == typeof(ExecutionContext));
+            string invocationId = functionExecutionContext.InvocationId.ToString();
+
+            startedEvent = new FunctionStartedEvent(functionExecutionContext.InvocationId, Metadata);
+            _metrics.BeginEvent(startedEvent);
+
+            try
+            {
+                TraceWriter.Info($"Function started (Id={invocationId})");
+
+                invokeTask = InvokeInternal(parameters);
+                invokeTask.Wait(timeoutOrShutdownToken);
+
+                TraceWriter.Info($"Function completed (Success, Id={invocationId})");
+            }
+            catch (OperationCanceledException ex) when (ex.CancellationToken == timeoutOrShutdownToken)
+            {
+                string reason = "Host is Stopping";
+
+                // TODO: What's the best way to do this?
+                var stateProp = typeof(JobHost).GetField("_state", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                int hostState = (int)stateProp.GetValue(Host);
+
+                // 3 indicates StoppingOrStopped. If that's the case, just let it go.
+                // Otherwise it's a timeout.
+                if (hostState != 3)
+                {
+                    reason = "Timeout";
+                    ex.Data.Add("FunctionTimeout", true);
+                }
+
+                if (startedEvent != null)
+                {
+                    startedEvent.Success = false;
+                }
+
+                LogFunctionFailed($"Failure: {reason}", invocationId);
+
+                throw;
+            }
+            catch (AggregateException ex)
+            {
+                AggregateException flattenedEx = ex.Flatten();
+                ExceptionDispatchInfo exInfo = null;
+
+                // If there's only a single exception, rethrow it by itself
+                if (flattenedEx.InnerExceptions.Count == 1)
+                {
+                    exInfo = ExceptionDispatchInfo.Capture(flattenedEx.InnerExceptions.Single());
+                }
+                else
+                {
+                    exInfo = ExceptionDispatchInfo.Capture(flattenedEx);
+                }
+
+                if (startedEvent != null)
+                {
+                    startedEvent.Success = false;
+                }
+
+                LogFunctionFailed("Failure", invocationId);
+
+                exInfo.Throw();
+            }
+            catch
+            {
+                if (startedEvent != null)
+                {
+                    startedEvent.Success = false;
+                }
+
+                LogFunctionFailed("Failure", invocationId);
+
+                throw;
+            }
+            finally
+            {
+                if (startedEvent != null)
+                {
+                    _metrics.EndEvent(startedEvent);
+                }
+            }
+
+            return Task.FromResult(0);
+        }
+
+        private void LogFunctionFailed(string resultString, string invocationId)
+        {
+            string message = $"Function completed ({resultString}";
+            if (string.IsNullOrEmpty(invocationId))
+            {
+                TraceWriter.Error($"{message})");
+            }
+            else
+            {
+                TraceWriter.Error($"{message}, Id={invocationId})");
+            }
+        }
+
+        public abstract Task InvokeInternal(object[] parameters);
 
         protected virtual void OnScriptFileChanged(object sender, FileSystemEventArgs e)
         {

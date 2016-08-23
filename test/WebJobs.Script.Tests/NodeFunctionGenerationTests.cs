@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Description;
@@ -159,7 +160,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             Assert.Equal("Test", method.Name);
             ParameterInfo[] parameters = method.GetParameters();
-            Assert.Equal(4, parameters.Length);
+            Assert.Equal(5, parameters.Length);
             Assert.Equal(typeof(Task), method.ReturnType);
 
             // verify TextWriter parameter
@@ -176,6 +177,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             parameter = parameters[3];
             Assert.Equal("_context", parameter.Name);
             Assert.Equal(typeof(ExecutionContext), parameter.ParameterType);
+
+            // verify CancellationToken parameter            
+            parameter = parameters[4];
+            Assert.Equal("_cancellationToken", parameter.Name);
+            Assert.Equal(typeof(CancellationToken), parameter.ParameterType);
         }
 
         private static MethodInfo GenerateMethod(BindingMetadata trigger)

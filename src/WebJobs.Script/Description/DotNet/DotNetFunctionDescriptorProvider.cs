@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Script.Binding;
 using Microsoft.CodeAnalysis.Scripting;
 
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
         {
         }
 
-        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config, 
+        public DotNetFunctionDescriptorProvider(ScriptHost host, ScriptHostConfiguration config,
             ICompilationServiceFactory compilationServiceFactory)
             : base(host, config)
         {
@@ -152,6 +153,12 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 {
                     // Add ExecutionContext to provide access to InvocationId, etc.
                     descriptors.Add(new ParameterDescriptor(ScriptConstants.SystemExecutionContextParameterName, typeof(ExecutionContext)));
+                }
+
+                if (!descriptors.Any(p => p.Type == typeof(CancellationToken)))
+                {
+                    // Add the CancellationToken. We need this to ensure we can cancel even if the Function hasn't requested it.
+                    descriptors.Add(new ParameterDescriptor(ScriptConstants.SystemCancellationTokenParameterName, typeof(CancellationToken)));
                 }
 
                 // If we have an HTTP trigger binding but no parameter binds to the raw HttpRequestMessage,

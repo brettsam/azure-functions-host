@@ -14,6 +14,7 @@ namespace Microsoft.Azure.WebJobs.Script
         public ScriptHostConfiguration()
         {
             HostConfig = new JobHostConfiguration();
+            HostConfig.FunctionTimeout = TimeSpan.FromMinutes(5);
             FileWatchingEnabled = true;
             FileLoggingMode = FileLoggingMode.Never;
             RootScriptPath = Environment.CurrentDirectory;

@@ -155,11 +155,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             FunctionMetadata metadata = new FunctionMetadata();
             object[] invocationArguments = null;
-              TestInvoker invoker = new TestInvoker(args =>
-            {
-                invocationArguments = args;
-                invocationArguments[0] = "newvalue";
-            });
+            TestInvoker invoker = new TestInvoker(args =>
+          {
+              invocationArguments = args;
+              invocationArguments[0] = "newvalue";
+          });
             FunctionDescriptor function = new FunctionDescriptor(functionName, invoker, metadata, parameters);
             Collection<FunctionDescriptor> functions = new Collection<FunctionDescriptor>();
             functions.Add(function);
@@ -264,7 +264,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             private readonly ConcurrentQueue<Tuple<SendOrPostCallback, object>> _workItems =
                 new ConcurrentQueue<Tuple<SendOrPostCallback, object>>();
-          
+
             public override void Post(SendOrPostCallback d, object state)
             {
                 _workItems.Enqueue(new Tuple<SendOrPostCallback, object>(d, state));

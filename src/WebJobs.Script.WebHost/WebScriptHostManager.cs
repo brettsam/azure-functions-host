@@ -323,7 +323,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         protected override void OnInitializeConfig(JobHostConfiguration config)
         {
             base.OnInitializeConfig(config);
-            
+
             // Add our WebHost specific services
             config.AddService<IMetricsLogger>(_metricsLogger);
 
@@ -347,6 +347,14 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             // Purge any old Function secrets
             _secretManager.PurgeOldFiles(Instance.ScriptConfig.RootScriptPath, Instance.TraceWriter);
+        }
+
+        protected override void OnTimeout()
+        {
+            base.OnTimeout();
+            Stop();
+            Task.Delay(2000).Wait();
+            HostingEnvironment.InitiateShutdown();
         }
 
         internal void InitializeHttpFunctions(Collection<FunctionDescriptor> functions)

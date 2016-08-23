@@ -76,13 +76,16 @@ namespace Microsoft.Azure.WebJobs.Script
                 {
                     IsRunning = false;
 
-                    // Create a new host config, but keep the host id from existing one
+                    // Create a new host config, but keep the host id and timeout from existing one
                     _config.HostConfig = new JobHostConfiguration
                     {
-                        HostId = _config.HostConfig.HostId
+                        HostId = _config.HostConfig.HostId,
+                        FunctionTimeout = _config.HostConfig.FunctionTimeout
                     };
                     OnInitializeConfig(_config.HostConfig);
                     newInstance = _scriptHostFactory.Create(_config);
+                    newInstance.FunctionTimeout += (s, e) => OnTimeout();
+
                     _traceWriter = newInstance.TraceWriter;
 
                     if (_traceWriter != null)
@@ -111,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Script
                     // signaled. That is fine - the restart will be processed immediately
                     // once we get to this line again. The important thing is that these
                     // restarts are only happening on a single thread.
-                    WaitHandle.WaitAny(new WaitHandle[] 
+                    WaitHandle.WaitAny(new WaitHandle[]
                     {
                         cancellationToken.WaitHandle,
                         newInstance.RestartEvent,
@@ -229,6 +232,10 @@ namespace Microsoft.Azure.WebJobs.Script
             {
                 // best effort
             }
+        }
+
+        protected virtual void OnTimeout()
+        {
         }
 
         private ScriptHost[] GetLiveInstancesAndClear()

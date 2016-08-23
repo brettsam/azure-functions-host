@@ -385,7 +385,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             JObject config = new JObject();
             config["id"] = ID;
-            
+
             ScriptHostConfiguration scriptConfig = new ScriptHostConfiguration();
             Assert.Null(scriptConfig.Functions);
 
@@ -395,6 +395,21 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             Assert.Equal(2, scriptConfig.Functions.Count);
             Assert.Equal("Function1", scriptConfig.Functions[0]);
             Assert.Equal("Function2", scriptConfig.Functions[1]);
+        }
+
+        [Fact]
+        public void ApplyTimeout()
+        {
+            JObject config = new JObject();
+            config["id"] = ID;
+
+            ScriptHostConfiguration scriptConfig = new ScriptHostConfiguration();
+            Assert.Equal(TimeSpan.FromMinutes(5), scriptConfig.HostConfig.FunctionTimeout);
+
+            config["timeout"] = "00:00:30";
+
+            ScriptHost.ApplyConfiguration(config, scriptConfig);
+            Assert.Equal(TimeSpan.FromSeconds(30), scriptConfig.HostConfig.FunctionTimeout);
         }
 
         [Fact]
