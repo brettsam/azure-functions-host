@@ -1,27 +1,47 @@
-﻿using System.Net;
+﻿#r "..\SharedBin\Microsoft.ReportViewer.Common.dll"
+#r "..\SharedBin\Microsoft.ReportViewer.ProcessingObjectModel.dll"
+#r "..\SharedBin\Microsoft.ReportViewer.WebForms.dll"
 
-public static Task<HttpResponseMessage> Run(HttpRequestMessage req, TraceWriter log)
+#r "Newtonsoft.Json"
+#r "System.Data"
+#r "System.Web"
+#r "System.Net"
+#r "System.IO"
+
+using Newtonsoft.Json;
+using Microsoft.Reporting.WebForms;
+using System.Data;
+using System;
+using System.Web;
+using System.Web.Hosting;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Mail;
+using System.IO;
+
+public static HttpResponseMessage Run(HttpRequestMessage req, TraceWriter log)
 {
-    var queryParams = req.GetQueryNameValuePairs()
-        .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+    ReportViewer rv = new ReportViewer();
+    rv.ProcessingMode = ProcessingMode.Local;
+    rv.LocalReport.ReportPath = "e:\\Test2.rdlc";
+    ReportParameter Test = new ReportParameter("Test", "Test Report!");
 
-    log.Info(string.Format("C# HTTP trigger function processed a request. {0}", req.RequestUri));
+    rv.LocalReport.SetParameters(new ReportParameter[] { Test });
+    rv.LocalReport.Refresh();
 
-    HttpResponseMessage res = null;
-    if (queryParams.TryGetValue("name", out string name))
-    {
-        res = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent("Hello " + name)
-        };
-    }
-    else
-    {
-        res = new HttpResponseMessage(HttpStatusCode.BadRequest)
-        {
-            Content = new StringContent("Please pass a name on the query string")
-        };
-    }
+    byte[] streamBytes = null;
+    string mimeType = "";
+    string encoding = "";
+    string filenameExtension = "";
+    string[] streamids = null;
+    Warning[] warnings = null;
 
-    return Task.FromResult(res);
+    streamBytes = rv.LocalReport.Render("PDF", null, out mimeType, out encoding, out filenameExtension, out streamids, out warnings);
+
+    HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
+    response.Content = new ByteArrayContent(streamBytes);
+    response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
+    response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+    return response;
 }

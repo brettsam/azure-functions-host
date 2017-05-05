@@ -14,7 +14,8 @@
     "queues": {
         "visibilityTimeout": "00:00:10"
     },
-    "swagger": {
-        "enabled": true
-    }
+  "swagger": {
+    "enabled": true
+  },
+  "functions": ["HttpTrigger-CSharp"]
 }
