@@ -352,15 +352,9 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                         // Node captures the AsyncLocal value of the first invocation, which means that logs
                         // are correlated incorrectly. Here we'll overwrite that value with the correct value
                         // immediately before logging.
-                        using (invocationContext.Logger.BeginScope(
-                            new Dictionary<string, object>
-                            {
-                                ["MS_FunctionInvocationId"] = invocationContext.ExecutionContext.InvocationId
-                            }))
-                        {
-                            // TraceWriter already logs to ILogger
-                            traceWriter.Trace(evt);
-                        }
+
+                        // TraceWriter already logs to ILogger
+                        traceWriter.Trace(evt);
                     }
                     catch (ObjectDisposedException)
                     {

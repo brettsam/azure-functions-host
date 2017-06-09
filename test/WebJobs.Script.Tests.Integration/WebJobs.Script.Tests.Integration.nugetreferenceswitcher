@@ -1,0 +1,3 @@
+WebJobs.Logging.ApplicationInsights	../../../azure-webjobs-sdk/src/Microsoft.Azure.WebJobs.Logging.ApplicationInsights/WebJobs.Logging.ApplicationInsights.csproj	../../packages/Microsoft.Azure.WebJobs.Logging.ApplicationInsights.2.1.0-beta1-10792/lib/net45/Microsoft.Azure.WebJobs.Logging.ApplicationInsights.dll
+WebJobs.Host	../../../azure-webjobs-sdk/src/Microsoft.Azure.WebJobs.Host/WebJobs.Host.csproj	../../packages/Microsoft.Azure.WebJobs.2.1.0-beta1-10792/lib/net45/Microsoft.Azure.WebJobs.Host.dll
+WebJobs.Logging	../../../azure-webjobs-sdk/src/Microsoft.Azure.WebJobs.Logging/WebJobs.Logging.csproj	../../packages/Microsoft.Azure.WebJobs.Logging.2.1.0-beta1-10792/lib/net45/Microsoft.Azure.WebJobs.Logging.dll

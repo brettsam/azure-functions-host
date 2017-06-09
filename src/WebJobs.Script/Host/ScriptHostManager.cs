@@ -125,7 +125,8 @@ namespace Microsoft.Azure.WebJobs.Script
                     // Create a new host config, but keep the host id from existing one
                     _config.HostConfig = new JobHostConfiguration
                     {
-                        HostId = _config.HostConfig.HostId
+                        HostId = _config.HostConfig.HostId,
+                        LoggerFactory = new LoggerFactory()
                     };
                     OnInitializeConfig(_config);
                     newInstance = _scriptHostFactory.Create(_environment, EventManager, _settingsManager, _config);

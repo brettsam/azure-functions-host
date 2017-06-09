@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Loggers;
 using Microsoft.Azure.WebJobs.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
@@ -16,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
     {
         private readonly ILogWriter _writer;
 
-        public FastLogger(string hostName, string accountConnectionString, TraceWriter trace)
+        public FastLogger(string hostName, string accountConnectionString, TraceWriter trace, ILoggerFactory loggerFactory)
         {
             if (trace == null)
             {
@@ -28,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             var tableProvider = LogFactory.NewLogTableProvider(client);
 
             string containerName = Environment.MachineName;
-            this._writer = LogFactory.NewWriter(hostName, containerName, tableProvider, (e) => OnException(e, trace));
+            this._writer = LogFactory.NewWriter(hostName, containerName, tableProvider, loggerFactory, (e) => OnException(e, trace));
         }
 
         public async Task AddAsync(FunctionInstanceLogEntry item, CancellationToken cancellationToken = default(CancellationToken))

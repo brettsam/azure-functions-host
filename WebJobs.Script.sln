@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15 (VS2017)
-VisualStudioVersion = 15.1.26403.7
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 15.0.0.0
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Script", "src\WebJobs.Script\WebJobs.Script.csproj", "{1DC670CD-F42F-4D8F-97BD-0E1AA8221094}"
 EndProject
@@ -452,6 +452,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Script.Scaling", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Script.Scaling.Tests", "test\WebJobs.Script.Scaling.Tests\WebJobs.Script.Scaling.Tests.csproj", "{8088DC08-4BB1-442D-8CD4-571FC9330D54}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Logging.ApplicationInsights", "..\azure-webjobs-sdk\src\Microsoft.Azure.WebJobs.Logging.ApplicationInsights\WebJobs.Logging.ApplicationInsights.csproj", "{D3FF0FDE-EBDF-4751-8131-3375CF2A5C21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Host", "..\azure-webjobs-sdk\src\Microsoft.Azure.WebJobs.Host\WebJobs.Host.csproj", "{0E095CB2-3030-49FF-966C-785F1A55F0C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebJobs.Logging", "..\azure-webjobs-sdk\src\Microsoft.Azure.WebJobs.Logging\WebJobs.Logging.csproj", "{B5A04006-AB0C-4800-AE4C-080D31867DE3}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		test\WebJobs.Script.Tests.Shared\WebJobs.Script.Tests.Shared.projitems*{35a2025d-f68a-4b57-83a2-ed4eb9c3894d}*SharedItemsImports = 4
@@ -503,6 +509,18 @@ Global
 		{8088DC08-4BB1-442D-8CD4-571FC9330D54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8088DC08-4BB1-442D-8CD4-571FC9330D54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8088DC08-4BB1-442D-8CD4-571FC9330D54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3FF0FDE-EBDF-4751-8131-3375CF2A5C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3FF0FDE-EBDF-4751-8131-3375CF2A5C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3FF0FDE-EBDF-4751-8131-3375CF2A5C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3FF0FDE-EBDF-4751-8131-3375CF2A5C21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E095CB2-3030-49FF-966C-785F1A55F0C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E095CB2-3030-49FF-966C-785F1A55F0C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E095CB2-3030-49FF-966C-785F1A55F0C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E095CB2-3030-49FF-966C-785F1A55F0C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5A04006-AB0C-4800-AE4C-080D31867DE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5A04006-AB0C-4800-AE4C-080D31867DE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5A04006-AB0C-4800-AE4C-080D31867DE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5A04006-AB0C-4800-AE4C-080D31867DE3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

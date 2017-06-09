@@ -1,0 +1,1 @@
+WebJobs.Host	../../../azure-webjobs-sdk/src/Microsoft.Azure.WebJobs.Host/WebJobs.Host.csproj	../../packages/Microsoft.Azure.WebJobs.2.1.0-beta1-10792/lib/net45/Microsoft.Azure.WebJobs.Host.dll
