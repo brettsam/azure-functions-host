@@ -78,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
             string settingValue = null;
             if (!string.IsNullOrEmpty(settingKey))
             {
-                settingValue = Environment.GetEnvironmentVariable(settingKey);
+                settingValue = _settingsCache.GetOrAdd(settingKey, (key) => Utility.GetSettingFromConfigOrEnvironment(key));
             }
 
             return settingValue;
@@ -88,7 +88,7 @@ namespace Microsoft.Azure.WebJobs.Script.Config
         {
             if (!string.IsNullOrEmpty(settingKey))
             {
-                Environment.SetEnvironmentVariable(settingKey, settingValue);
+                _settingsCache.AddOrUpdate(settingKey, settingValue, (a, b) => settingValue);
             }
         }
     }
