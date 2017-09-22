@@ -284,19 +284,6 @@ namespace Microsoft.Azure.WebJobs.Script
                     hostConfig.UseDevelopmentSettings();
                 }
 
-                // Ensure we always have an ILoggerFactory,
-                // regardless of whether AppInsights is registered or not
-                if (hostConfig.LoggerFactory == null)
-                {
-                    hostConfig.LoggerFactory = new LoggerFactory();
-
-                    // If we've created the LoggerFactory, then we are responsible for
-                    // disposing. Store this locally for disposal later. We can't rely
-                    // on accessing this directly from ScriptConfig.HostConfig as the
-                    // ScriptConfig is re-used for every host.
-                    _loggerFactory = hostConfig.LoggerFactory;
-                }
-
                 Func<string, FunctionDescriptor> funcLookup = (name) => this.GetFunctionOrNull(name);
                 hostConfig.AddService(funcLookup);
 
@@ -333,6 +320,19 @@ namespace Microsoft.Azure.WebJobs.Script
                 {
                     // if no TraceWriter has been configured, default it to Console
                     TraceWriter = new ConsoleTraceWriter(hostTraceLevel);
+                }
+
+                // Ensure we always have an ILoggerFactory,
+                // regardless of whether AppInsights is registered or not
+                if (hostConfig.LoggerFactory == null)
+                {
+                    hostConfig.LoggerFactory = new LoggerFactoryWrapper(TraceWriter);
+
+                    // If we've created the LoggerFactory, then we are responsible for
+                    // disposing. Store this locally for disposal later. We can't rely
+                    // on accessing this directly from ScriptConfig.HostConfig as the
+                    // ScriptConfig is re-used for every host.
+                    _loggerFactory = hostConfig.LoggerFactory;
                 }
 
                 string readingFileMessage = string.Format(CultureInfo.InvariantCulture, "Reading host configuration file '{0}'", hostConfigFilePath);
