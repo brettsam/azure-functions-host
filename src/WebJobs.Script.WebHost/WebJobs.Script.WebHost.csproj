@@ -45,6 +45,7 @@
     <PackageReference Include="Microsoft.Azure.WebJobs.Logging" Version="3.0.0-beta3" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Logging.ApplicationInsights" Version="3.0.0-beta3" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="2.1.88-alpha" />
+    <PackageReference Include="WindowsAzure.Storage" Version="8.5.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.0-beta004">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

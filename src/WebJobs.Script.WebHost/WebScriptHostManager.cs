@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,17 +65,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             _hostTimeoutSeconds = hostTimeoutSeconds;
             _hostRunningPollIntervalMilliseconds = hostPollingIntervalMilliseconds;
             _router = router;
-
-            var systemEventGenerator = config.HostConfig.GetService<IEventGenerator>() ?? new EventGenerator();
-            var systemTraceWriter = new SystemTraceWriter(systemEventGenerator, settingsManager, TraceLevel.Verbose);
-            if (config.TraceWriter != null)
-            {
-                config.TraceWriter = new CompositeTraceWriter(new TraceWriter[] { config.TraceWriter, systemTraceWriter });
-            }
-            else
-            {
-                config.TraceWriter = systemTraceWriter;
-            }
 
             config.IsSelfHost = webHostSettings.IsSelfHost;
 
@@ -198,7 +186,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             var hostId = hostConfig.HostId ?? "default";
             Func<string, FunctionDescriptor> funcLookup = (name) => this.Instance.GetFunctionOrNull(name);
             var loggingConnectionString = config.HostConfig.DashboardConnectionString;
-            var instanceLogger = new FunctionInstanceLogger(funcLookup, _metricsLogger, hostId, loggingConnectionString, config.TraceWriter);
+            var instanceLogger = new FunctionInstanceLogger(funcLookup, _metricsLogger, hostId, loggingConnectionString, hostConfig.LoggerFactory);
             hostConfig.AddService<IAsyncCollector<FunctionInstanceLogEntry>>(instanceLogger);
 
             // disable standard Dashboard logging (enabling Table logging above)
@@ -209,7 +197,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         {
             if (InStandbyMode)
             {
-                Instance?.TraceWriter.Info("Host is in standby mode");
+                Instance?.Logger.LogInformation("Host is in standby mode");
             }
 
             InitializeHttp();
@@ -222,7 +210,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             if (!InStandbyMode)
             {
                 // Purge any old Function secrets
-                _secretManager.PurgeOldSecretsAsync(Instance.ScriptConfig.RootScriptPath, Instance.TraceWriter, Instance.Logger);
+                _secretManager.PurgeOldSecretsAsync(Instance.ScriptConfig.RootScriptPath, Instance.Logger);
             }
 
             base.OnHostStarted();
@@ -287,7 +275,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         public override void Shutdown()
         {
             string message = "Environment shutdown has been triggered. Stopping host and signaling shutdown.";
-            Instance?.TraceWriter.Info(message);
             Instance?.Logger?.LogInformation(message);
 
             Stop();

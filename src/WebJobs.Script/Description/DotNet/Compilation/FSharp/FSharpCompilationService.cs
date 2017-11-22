@@ -10,7 +10,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
@@ -33,14 +32,12 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         private readonly OptimizationLevel _optimizationLevel;
         private readonly Regex _hashRRegex;
-        private readonly TraceWriter _traceWriter;
         private readonly ILogger _logger;
 
-        public FSharpCompilationService(IFunctionMetadataResolver metadataResolver, OptimizationLevel optimizationLevel, TraceWriter traceWriter, ILoggerFactory loggerFactory)
+        public FSharpCompilationService(IFunctionMetadataResolver metadataResolver, OptimizationLevel optimizationLevel, ILoggerFactory loggerFactory)
         {
             _metadataResolver = metadataResolver;
             _optimizationLevel = optimizationLevel;
-            _traceWriter = traceWriter;
             _hashRRegex = new Regex(@"^\s*#r\s+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             _logger = loggerFactory?.CreateLogger(LogCategories.Startup);
         }
@@ -197,7 +194,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 else
                 {
                     string message = $"F# compilation failed with arguments: {string.Join(" ", otherFlags)}";
-                    _traceWriter.Verbose(message);
                     _logger?.LogDebug(message);
                 }
             }
@@ -208,7 +204,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                     t => t.Exception.Handle(e =>
                 {
                     string message = $"Unable to delete F# compilation file: {e.ToString()}";
-                    _traceWriter.Warning(message);
                     _logger?.LogWarning(message);
                     return true;
                 }), TaskContinuationOptions.OnlyOnFaulted);

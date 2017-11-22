@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -107,7 +106,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Security
                 Mock<IKeyValueConverterFactory> mockValueConverterFactory = GetConverterFactoryMock();
 
                 IDictionary<string, string> functionSecrets;
-                var traceWriter = new TestTraceWriter(System.Diagnostics.TraceLevel.Verbose);
                 ISecretsRepository repository = new FileSystemSecretsRepository(directory.Path);
                 using (var secretManager = new SecretManager(repository, mockValueConverterFactory.Object, null))
                 {

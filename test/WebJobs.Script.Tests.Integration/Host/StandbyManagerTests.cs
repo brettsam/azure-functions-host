@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,20 +11,18 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost;
-using Xunit;
 using Microsoft.WebJobs.Script.Tests;
+using Xunit;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
     public class StandbyManagerTests
     {
-        private readonly TestTraceWriter _traceWriter;
         private readonly ScriptSettingsManager _settingsManager;
 
         public StandbyManagerTests()
         {
             _settingsManager = ScriptSettingsManager.Instance;
-            _traceWriter = new TestTraceWriter(TraceLevel.Info);
             WebScriptHostManager.ResetStandbyMode();
         }
 
@@ -72,32 +69,34 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             using (var env = new TestScopedEnvironmentVariable(vars))
             {
                 var httpConfig = new HttpConfiguration();
-                
+
                 var settingsManager = ScriptSettingsManager.Instance;
                 var testRootPath = Path.Combine(Path.GetTempPath(), "StandbyModeTest");
                 if (Directory.Exists(testRootPath))
                 {
                     Directory.Delete(testRootPath, true);
                 }
-                var traceWriter = new TestTraceWriter(TraceLevel.Info);
+
+                TestLoggerProvider loggerProvider = new TestLoggerProvider();
+
                 var webHostSettings = new WebHostSettings
                 {
                     IsSelfHost = true,
                     LogPath = testRootPath,
                     SecretsPath = Path.Combine(testRootPath, "Secrets"),
                     ScriptPath = testRootPath,
-                    TraceWriter = traceWriter
+                    LoggerFactoryBuilder = new TestLoggerFactoryBuilder(loggerProvider)
                 };
-                
+
                 var httpServer = new HttpServer(httpConfig);
                 var httpClient = new HttpClient(httpServer);
                 httpClient.BaseAddress = new Uri("https://localhost/");
 
                 TestHelpers.WaitForWebHost(httpClient);
 
-                var traces = traceWriter.Traces.ToArray();
-                Assert.Equal($"Creating StandbyMode placeholder function directory ({Path.GetTempPath()}Functions\\Standby\\WWWRoot)", traces[0].Message);
-                Assert.Equal("StandbyMode placeholder function directory created", traces[1].Message);
+                var traces = loggerProvider.GetAllLogMessages().ToArray();
+                Assert.Equal($"Creating StandbyMode placeholder function directory ({Path.GetTempPath()}Functions\\Standby\\WWWRoot)", traces[0].FormattedMessage);
+                Assert.Equal("StandbyMode placeholder function directory created", traces[1].FormattedMessage);
 
                 // issue warmup request and verify
                 var request = new HttpRequestMessage(HttpMethod.Get, "api/warmup");
@@ -125,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 await Task.Delay(2000);
 
                 // verify logs
-                string[] logLines = traceWriter.Traces.Select(p => p.Message).ToArray();
+                string[] logLines = loggerProvider.GetAllLogMessages().Select(p => p.FormattedMessage).ToArray();
                 Assert.Equal(2, logLines.Count(p => p.Contains("Host is in standby mode")));
                 Assert.Equal(2, logLines.Count(p => p.Contains("Stopping Host")));
                 Assert.Equal(2, logLines.Count(p => p.Contains("Executed 'Functions.WarmUp' (Succeeded")));

@@ -30,8 +30,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         /// </summary>
         public bool IsAuthDisabled { get; set; } = false;
 
-        public TraceWriter TraceWriter { get; set; }
-
         public ILoggerFactoryBuilder LoggerFactoryBuilder { get; set; } = new DefaultLoggerFactoryBuilder();
 
         internal static WebHostSettings CreateDefault(ScriptSettingsManager settingsManager)

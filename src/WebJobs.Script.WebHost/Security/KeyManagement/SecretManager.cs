@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.WebHost.Properties;
 using Microsoft.Extensions.Logging;
@@ -417,7 +416,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             }
         }
 
-        public async Task PurgeOldSecretsAsync(string rootScriptPath, TraceWriter traceWriter, ILogger logger)
+        public async Task PurgeOldSecretsAsync(string rootScriptPath, ILogger logger)
         {
             if (!Directory.Exists(rootScriptPath))
             {
@@ -431,7 +430,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             // invalid unparsable states.
             var currentFunctions = Directory.EnumerateDirectories(rootScriptPath).Select(p => Path.GetFileName(p)).ToList();
 
-            await _repository.PurgeOldSecretsAsync(currentFunctions, traceWriter, logger);
+            await _repository.PurgeOldSecretsAsync(currentFunctions, logger);
         }
     }
 }

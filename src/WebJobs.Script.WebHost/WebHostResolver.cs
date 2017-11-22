@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.WebHost.Properties;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
 {
@@ -120,7 +121,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                     {
                         // we're starting the one and only one
                         // standby mode specialization
-                        _activeScriptHostConfig.TraceWriter.Info(Resources.HostSpecializationTrace);
+                        _activeHostManager.Instance?.Logger.LogInformation(Resources.HostSpecializationTrace);
 
                         // After specialization, we need to ensure that custom timezone
                         // settings configured by the user (WEBSITE_TIME_ZONE) are honored.
@@ -167,7 +168,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 ScriptPath = Path.Combine(tempRoot, @"Functions\Standby\WWWRoot"),
                 SecretsPath = Path.Combine(tempRoot, @"Functions\Standby\Secrets"),
                 LoggerFactoryBuilder = settings.LoggerFactoryBuilder,
-                TraceWriter = settings.TraceWriter,
                 IsSelfHost = settings.IsSelfHost
             };
 
@@ -181,7 +181,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 RootScriptPath = settings.ScriptPath,
                 RootLogPath = settings.LogPath,
                 FileLoggingMode = FileLoggingMode.DebugOnly,
-                TraceWriter = settings.TraceWriter,
                 IsSelfHost = settings.IsSelfHost
             };
 

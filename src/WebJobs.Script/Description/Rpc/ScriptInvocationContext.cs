@@ -23,8 +23,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         public TaskCompletionSource<ScriptInvocationResult> ResultSource { get; set; }
 
-        public TraceWriter TraceWriter { get; set; }
-
         public ILogger Logger { get; set; }
     }
 }

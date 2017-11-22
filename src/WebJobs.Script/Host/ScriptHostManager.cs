@@ -12,7 +12,6 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.Eventing;
@@ -35,7 +34,6 @@ namespace Microsoft.Azure.WebJobs.Script
         private readonly ILoggerFactoryBuilder _loggerFactoryBuilder;
         private readonly IScriptHostEnvironment _environment;
         private readonly IDisposable _fileEventSubscription;
-        private readonly StructuredLogWriter _structuredLogWriter;
         private readonly HostPerformanceManager _performanceManager;
         private readonly Timer _hostHealthCheckTimer;
         private readonly TimeSpan hostHealthCheckInterval = TimeSpan.FromSeconds(15);
@@ -52,7 +50,6 @@ namespace Microsoft.Azure.WebJobs.Script
         private bool _stopped;
         private AutoResetEvent _stopEvent = new AutoResetEvent(false);
         private AutoResetEvent _restartHostEvent = new AutoResetEvent(false);
-        private TraceWriter _traceWriter;
         private ILogger _logger;
 
         private ScriptSettingsManager _settingsManager;
@@ -102,7 +99,6 @@ namespace Microsoft.Azure.WebJobs.Script
 
             EventManager = eventManager ?? new ScriptEventManager();
 
-            _structuredLogWriter = new StructuredLogWriter(EventManager, config.RootLogPath);
             _performanceManager = hostPerformanceManager ?? new HostPerformanceManager(settingsManager);
 
             // TEMP : temporarily disabling this until the feature is improved
@@ -175,7 +171,6 @@ namespace Microsoft.Azure.WebJobs.Script
                     newInstance = _scriptHostFactory.Create(_environment, EventManager, _settingsManager, _config, _loggerFactoryBuilder);
                     newInstance.HostInitialized += OnHostInitialized;
                     newInstance.HostStarted += OnHostStarted;
-                    _traceWriter = newInstance.TraceWriter;
                     _logger = newInstance.Logger;
 
                     _currentInstance = newInstance;
@@ -188,7 +183,6 @@ namespace Microsoft.Azure.WebJobs.Script
                     string extensionVersion = _settingsManager.GetSetting(EnvironmentSettingNames.FunctionsExtensionVersion);
                     string hostId = newInstance.ScriptConfig.HostConfig.HostId;
                     string message = $"Starting Host (HostId={hostId}, Version={ScriptHost.Version}, ProcessId={Process.GetCurrentProcess().Id}, Debug={newInstance.InDebugMode}, ConsecutiveErrors={consecutiveErrorCount}, StartupCount={_hostStartCount}, FunctionsExtensionVersion={extensionVersion})";
-                    _traceWriter?.Info(message);
                     _logger?.LogInformation(message);
 
                     newInstance.StartAsync(cancellationToken).GetAwaiter().GetResult();
@@ -233,7 +227,6 @@ namespace Microsoft.Azure.WebJobs.Script
                     // We need to keep the host running, so we catch and log any errors
                     // then restart the host
                     string message = "A ScriptHost error has occurred";
-                    _traceWriter?.Error(message, ex);
                     _logger?.LogError(0, ex, message);
 
                     // If a ScriptHost instance was created before the exception was thrown
@@ -288,7 +281,6 @@ namespace Microsoft.Azure.WebJobs.Script
                     builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "{0}: {1}", error.Key, functionErrors));
                 }
                 string message = builder.ToString();
-                host.TraceWriter.Error(message);
                 host.Logger?.LogError(message);
             }
         }
@@ -317,7 +309,6 @@ namespace Microsoft.Azure.WebJobs.Script
             {
                 // this thread now owns the instance
                 string message = "Stopping Host";
-                instance.TraceWriter?.Info(message);
                 instance.Logger?.LogInformation(message);
 
                 await instance.StopAsync();
@@ -456,7 +447,6 @@ namespace Microsoft.Azure.WebJobs.Script
                 _stopEvent.Dispose();
                 _restartDelayTokenSource?.Dispose();
                 _fileEventSubscription?.Dispose();
-                _structuredLogWriter.Dispose();
                 _restartHostEvent.Dispose();
 
                 _disposed = true;

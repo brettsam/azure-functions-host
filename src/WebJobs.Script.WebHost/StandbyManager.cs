@@ -7,10 +7,9 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.Config;
-using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.Azure.WebJobs.Script.WebHost
@@ -46,14 +45,16 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
         public static void Initialize(ScriptHostConfiguration config)
         {
-            CreateStandbyFunctions(config.RootScriptPath, config.TraceWriter);
+            LoggerFactory loggerFactory = new LoggerFactory();
+
+            CreateStandbyFunctions(config.RootScriptPath, null);
         }
 
-        private static void CreateStandbyFunctions(string scriptPath, TraceWriter traceWriter)
+        private static void CreateStandbyFunctions(string scriptPath, ILogger logger)
         {
             lock (_syncLock)
             {
-                traceWriter.Info($"Creating StandbyMode placeholder function directory ({scriptPath})");
+                logger.LogInformation($"Creating StandbyMode placeholder function directory ({scriptPath})");
 
                 FileUtility.DeleteDirectoryAsync(scriptPath, true).GetAwaiter().GetResult();
                 FileUtility.EnsureDirectoryExists(scriptPath);
@@ -68,7 +69,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 content = ReadResourceString($"Functions.{WarmUpFunctionName}.run.csx");
                 File.WriteAllText(Path.Combine(functionPath, "run.csx"), content);
 
-                traceWriter.Info($"StandbyMode placeholder function directory created");
+                logger.LogInformation($"StandbyMode placeholder function directory created");
             }
         }
 

@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Script.BindingExtensions;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization;
 using Microsoft.Azure.WebJobs.Script.WebHost.Security.Authorization.Policies;
 using Microsoft.Extensions.Configuration;
@@ -68,7 +69,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
 
             builder.RegisterType<DefaultSecretManagerFactory>().As<ISecretManagerFactory>().SingleInstance();
             builder.RegisterType<ScriptEventManager>().As<IScriptEventManager>().SingleInstance();
-            builder.RegisterType<DefaultLoggerFactoryBuilder>().As<ILoggerFactoryBuilder>().SingleInstance();
+            builder.RegisterType<EventGenerator>().As<IEventGenerator>().SingleInstance();
+            builder.RegisterType<WebHostLoggerFactoryBuilder>().As<ILoggerFactoryBuilder>().SingleInstance();
             builder.Register(c => WebHostSettings.CreateDefault(c.Resolve<ScriptSettingsManager>()));
             builder.RegisterType<WebHostResolver>().SingleInstance();
 
@@ -76,7 +78,7 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             builder.Register<IExtensionsManager>(c =>
             {
                 var hostInstance = c.Resolve<WebScriptHostManager>().Instance;
-                return new ExtensionsManager(hostInstance.ScriptConfig.RootScriptPath, hostInstance.TraceWriter, hostInstance.Logger);
+                return new ExtensionsManager(hostInstance.ScriptConfig.RootScriptPath, hostInstance.Logger);
             });
 
             // The services below need to be scoped to a pseudo-tenant (warm/specialized environment)

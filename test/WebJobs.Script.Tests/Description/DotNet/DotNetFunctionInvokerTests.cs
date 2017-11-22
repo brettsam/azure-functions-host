@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,6 +17,8 @@ using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.Tests.Properties;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Logging;
+using Microsoft.WebJobs.Script.Tests;
 using Moq;
 using Newtonsoft.Json.Linq;
 using WebJobs.Script.Tests;
@@ -27,6 +28,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 {
     public class DotNetFunctionInvokerTests
     {
+        private readonly TestLoggerProvider _loggerProvider = new TestLoggerProvider();
+
         public static IEnumerable<object[]> CompilationEnvironment
         {
             get
@@ -79,18 +82,22 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             await TestHelpers.Await(() =>
             {
-                return dependencies.TraceWriter.Traces.Any(t => t.Message.Contains("Compilation failed.")) &&
-                 dependencies.TraceWriter.Traces.Any(t => t.Message.Contains(DotNetConstants.MissingFunctionEntryPointCompilationCode));
+                IEnumerable<LogMessage> logMessages = _loggerProvider.GetAllLogMessages();
+
+                return logMessages.Any(t => t.FormattedMessage.Contains("Compilation failed.")) &&
+                 logMessages.Any(t => t.FormattedMessage.Contains(DotNetConstants.MissingFunctionEntryPointCompilationCode));
             });
 
-            dependencies.TraceWriter.Traces.Clear();
+            _loggerProvider.ClearAllLogMessages();
 
             CompilationErrorException resultException = await Assert.ThrowsAsync<CompilationErrorException>(() => invoker.GetFunctionTargetAsync());
 
             await TestHelpers.Await(() =>
             {
-                return dependencies.TraceWriter.Traces.Any(t => t.Message.Contains("Function compilation error")) &&
-                 dependencies.TraceWriter.Traces.Any(t => t.Message.Contains(DotNetConstants.MissingFunctionEntryPointCompilationCode));
+                IEnumerable<LogMessage> logMessages = _loggerProvider.GetAllLogMessages();
+
+                return logMessages.Any(t => t.FormattedMessage.Contains("Function compilation error")) &&
+                 logMessages.Any(t => t.FormattedMessage.Contains(DotNetConstants.MissingFunctionEntryPointCompilationCode));
             });
         }
 
@@ -125,7 +132,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
                     new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new FunctionAssemblyLoader(string.Empty),
-                    new DotNetCompilationServiceFactory(NullTraceWriter.Instance, null));
+                    new DotNetCompilationServiceFactory(null));
 
                 try
                 {
@@ -145,8 +152,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                     throw new Exception(compilationDetails, exc);
                 }
 
-                Assert.Contains(dependencies.TraceWriter.Traces,
-                    t => t.Message.Contains($"warning {DotNetConstants.MissingBindingArgumentCompilationCode}") && t.Message.Contains("'TestBinding'"));
+                Assert.Contains(_loggerProvider.GetAllLogMessages(),
+                    t => t.FormattedMessage.Contains($"warning {DotNetConstants.MissingBindingArgumentCompilationCode}") && t.FormattedMessage.Contains("'TestBinding'"));
             }
         }
 
@@ -184,7 +191,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
                     new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new FunctionAssemblyLoader(string.Empty),
-                    new DotNetCompilationServiceFactory(NullTraceWriter.Instance, null));
+                    new DotNetCompilationServiceFactory(null));
                 try
                 {
                     await invoker.GetFunctionTargetAsync();
@@ -204,7 +211,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 }
 
                 // Verify that logs on the second instance were suppressed
-                int count = dependencies.TraceWriter.Traces.Count();
+                int count = _loggerProvider.GetAllLogMessages().Count();
                 Assert.Equal(0, count);
             }
         }
@@ -295,8 +302,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 Assert.Equal(expectedAttempt.ToString(), exception.Message);
             }
 
-            var compilerErrorTraces = dependencies.TraceWriter.Traces
-                .Where(t => string.Equals(t.Message, "Function loader reset. Failed compilation result will not be cached."));
+            var compilerErrorTraces = _loggerProvider.GetAllLogMessages()
+                .Where(t => string.Equals(t.FormattedMessage, "Function loader reset. Failed compilation result will not be cached."));
 
             // 3 attempts total, make sure we've logged the 2 retries.
             Assert.Equal(2, compilerErrorTraces.Count());
@@ -336,7 +343,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
                 var invoker = new DotNetFunctionInvoker(dependencies.Host.Object, metadata, new Collection<FunctionBinding>(),
                   new Collection<FunctionBinding> { testBinding.Object }, new FunctionEntryPointResolver(), new FunctionAssemblyLoader(string.Empty),
-                  new DotNetCompilationServiceFactory(NullTraceWriter.Instance, null), metadataResolver.Object);
+                  new DotNetCompilationServiceFactory(null), metadataResolver.Object);
 
                 await invoker.RestorePackagesAsync(true);
 
@@ -348,33 +355,27 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             }
         }
 
-        private RunDependencies CreateDependencies(TraceLevel traceLevel = TraceLevel.Info, IScriptHostEnvironment environment = null)
+        private RunDependencies CreateDependencies(IScriptHostEnvironment environment = null)
         {
             var dependencies = new RunDependencies();
 
-            var functionTraceWriter = new TestTraceWriter(System.Diagnostics.TraceLevel.Verbose);
-            var traceWriter = new TestTraceWriter(System.Diagnostics.TraceLevel.Verbose);
             var scriptHostConfiguration = new ScriptHostConfiguration
             {
                 HostConfig = new JobHostConfiguration(),
-                TraceWriter = traceWriter,
                 FileLoggingMode = FileLoggingMode.Always,
                 FileWatchingEnabled = true
             };
 
-            scriptHostConfiguration.HostConfig.Tracing.ConsoleLevel = System.Diagnostics.TraceLevel.Verbose;
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(_loggerProvider);
+            scriptHostConfiguration.HostConfig.LoggerFactory = loggerFactory;
+
             var eventManager = new ScriptEventManager();
 
             var host = new Mock<ScriptHost>(environment ?? new NullScriptHostEnvironment(), eventManager, scriptHostConfiguration, null, null, null);
             host.CallBase = true;
 
-            var traceWriterFactory = new Mock<IFunctionTraceWriterFactory>();
-            traceWriterFactory.Setup(f => f.Create(It.IsAny<string>(), null))
-                .Returns(functionTraceWriter);
-
             host.SetupGet(h => h.IsPrimary).Returns(true);
-            host.SetupGet(h => h.FunctionTraceWriterFactory).Returns(traceWriterFactory.Object);
-
             var entrypointResolver = new Mock<IFunctionEntryPointResolver>();
 
             var compilation = new Mock<IDotNetCompilation>();
@@ -400,9 +401,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 EntrypointResolver = entrypointResolver,
                 Compilation = compilation,
                 CompilationService = compilationService,
-                CompilationServiceFactory = compilationServiceFactory,
-                TraceWriterFactory = traceWriterFactory,
-                TraceWriter = functionTraceWriter
+                CompilationServiceFactory = compilationServiceFactory
             };
         }
 
@@ -417,10 +416,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             public Mock<ICompilationService<IDotNetCompilation>> CompilationService { get; set; }
 
             public Mock<ICompilationServiceFactory<ICompilationService<IDotNetCompilation>, IFunctionMetadataResolver>> CompilationServiceFactory { get; set; }
-
-            public Mock<IFunctionTraceWriterFactory> TraceWriterFactory { get; set; }
-
-            public TestTraceWriter TraceWriter { get; set; }
         }
     }
 }

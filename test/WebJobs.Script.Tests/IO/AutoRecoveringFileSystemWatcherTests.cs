@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Script.IO;
-using Moq;
 using WebJobs.Script.Tests;
 using Xunit;
 
@@ -70,10 +69,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.IO
 
         public async Task RecoveryTest(int expectedNumberOfAttempts, bool isFailureScenario)
         {
-            var traceWriter = new TestTraceWriter(TraceLevel.Verbose);
-
             using (var directory = new TempDirectory())
-            using (var watcher = new AutoRecoveringFileSystemWatcher(directory.Path, traceWriter: traceWriter))
+            using (var watcher = new AutoRecoveringFileSystemWatcher(directory.Path))
             {
                 Directory.Delete(directory.Path, true);
 

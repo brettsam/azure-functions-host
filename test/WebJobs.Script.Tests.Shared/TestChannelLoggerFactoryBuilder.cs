@@ -6,12 +6,11 @@ using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Azure.WebJobs.Logging.ApplicationInsights;
 using Microsoft.Azure.WebJobs.Script;
-using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.WebJobs.Script.Tests
 {
-    public class TestChannelLoggerFactoryBuilder : DefaultLoggerFactoryBuilder
+    public class TestChannelLoggerFactoryBuilder : ILoggerFactoryBuilder
     {
         public const string ApplicationInsightsKey = "some_key";
 
@@ -22,13 +21,13 @@ namespace Microsoft.WebJobs.Script.Tests
             _channel = channel;
         }
 
-        public override void AddLoggerProviders(ILoggerFactory factory, ScriptHostConfiguration scriptConfig, ScriptSettingsManager settingsManager)
+        public override void AddLoggerProviders(ILoggerFactory factory)
         {
             // Replace TelemetryClient
             var clientFactory = new TestTelemetryClientFactory(scriptConfig.LogFilter.Filter, _channel);
             scriptConfig.HostConfig.AddService<ITelemetryClientFactory>(clientFactory);
 
-            base.AddLoggerProviders(factory, scriptConfig, settingsManager);
+            base.AddLoggerProviders(factory, scriptConfig, settingsManager, isFileLoggingEnabled, isPrimaryHost);
         }
     }
 

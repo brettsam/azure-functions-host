@@ -5,20 +5,19 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Script.Config;
 using Microsoft.Azure.WebJobs.Script.Eventing;
 using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.Properties;
 using Moq;
 using Xunit;
-using Microsoft.Azure.WebJobs.Extensions.Http;
 
 namespace Microsoft.Azure.WebJobs.Script.Tests
 {
     public class StandbyModeTests : IDisposable
     {
         private readonly WebHostResolver _webHostResolver;
-        private readonly TestTraceWriter _traceWriter;
         private readonly ScriptSettingsManager _settingsManager;
 
         public StandbyModeTests()
@@ -29,7 +28,6 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             _webHostResolver = new WebHostResolver(_settingsManager, new TestSecretManagerFactory(false),
                eventManagerMock.Object, WebHostSettings.CreateDefault(_settingsManager), routerMock.Object, new DefaultLoggerFactoryBuilder());
-            _traceWriter = new TestTraceWriter(TraceLevel.Info);
 
             WebScriptHostManager.ResetStandbyMode();
         }

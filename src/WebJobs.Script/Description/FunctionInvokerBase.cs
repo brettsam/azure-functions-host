@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Script.Diagnostics;
+using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,24 +14,21 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Script.Diagnostics;
-using Microsoft.Azure.WebJobs.Script.Eventing;
-using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
     public abstract class FunctionInvokerBase : IFunctionInvoker, IDisposable
     {
         private bool _disposed = false;
+        private ILogger _structuredLogger;
         private IDisposable _fileChangeSubscription;
 
         internal FunctionInvokerBase(ScriptHost host, FunctionMetadata functionMetadata, string logDirName = null)
         {
             Host = host;
             Metadata = functionMetadata;
-            FunctionLogger = new FunctionLogger(host, logDirName ?? functionMetadata.Name);
+            FunctionLogger = new FunctionLogger(host.ScriptConfig.HostConfig.LoggerFactory, logDirName ?? functionMetadata.Name);
+            _structuredLogger = host.ScriptConfig.HostConfig.LoggerFactory.CreateLogger("Structured");
         }
 
         protected static IDictionary<string, object> PrimaryHostTraceProperties { get; }
@@ -45,11 +46,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         public FunctionMetadata Metadata { get; }
 
-        protected TraceWriter TraceWriter => FunctionLogger.TraceWriter;
-
         protected ILogger Logger => FunctionLogger.Logger;
-
-        public TraceWriter FileTraceWriter => FunctionLogger.FileTraceWriter;
 
         /// <summary>
         /// All unhandled invocation exceptions will flow through this method.
@@ -98,7 +95,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             functionExecutionContext.FunctionName = metadata.Name;
 
             // These may not be present, so null is okay.
-            TraceWriter functionTraceWriter = parameters.OfType<TraceWriter>().FirstOrDefault();
             Binder binder = parameters.OfType<Binder>().FirstOrDefault();
             ILogger logger = parameters.OfType<ILogger>().FirstOrDefault();
 
@@ -106,7 +102,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
             {
                 ExecutionContext = functionExecutionContext,
                 Binder = binder,
-                TraceWriter = functionTraceWriter,
                 Logger = logger
             };
 
@@ -133,14 +128,11 @@ namespace Microsoft.Azure.WebJobs.Script.Description
         {
         }
 
-        protected internal void TraceOnPrimaryHost(string message, TraceLevel level, string source = null,  Exception exception = null)
+        protected internal void LogOnPrimaryHost(string message, LogLevel level, Exception exception = null)
         {
-            var traceEvent = new TraceEvent(level, message, source, exception);
-            foreach (var item in PrimaryHostTraceProperties)
-            {
-                traceEvent.Properties.Add(item);
-            }
-            TraceWriter.Trace(traceEvent);
+            IDictionary<string, object> properties = new Dictionary<string, object>(PrimaryHostTraceProperties);
+
+            Logger.Log(LogLevel.Information, 0, properties, exception, (state, ex) => message);
         }
 
         internal void TraceCompilationDiagnostics(ImmutableArray<Diagnostic> diagnostics, LogTargets logTarget = LogTargets.All)
@@ -150,48 +142,43 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 return;
             }
 
-            TraceWriter traceWriter = FunctionLogger.TraceWriter;
-            IDictionary<string, object> properties = PrimaryHostTraceProperties;
+            IDictionary<string, object> hostTraceProperties = PrimaryHostTraceProperties;
 
             if (!logTarget.HasFlag(LogTargets.User))
             {
-                traceWriter = Host.TraceWriter;
-                properties = PrimaryHostSystemTraceProperties;
+                hostTraceProperties = PrimaryHostSystemTraceProperties;
             }
             else if (!logTarget.HasFlag(LogTargets.System))
             {
-                properties = PrimaryHostUserTraceProperties;
+                hostTraceProperties = PrimaryHostUserTraceProperties;
             }
 
             foreach (var diagnostic in diagnostics.Where(d => !d.IsSuppressed))
             {
-                traceWriter.Trace(diagnostic.ToString(), diagnostic.Severity.ToTraceLevel(), properties);
+                Logger.Log(diagnostic.Severity.ToLogLevel(), 0, hostTraceProperties, null, (s, e) => diagnostic.ToString());
             }
 
             if (Host.InDebugMode && Host.IsPrimary)
             {
-                Host.EventManager.Publish(new StructuredLogEntryEvent(() =>
+                var logEntry = new StructuredLogEntry("codediagnostic");
+                logEntry.AddProperty("functionName", Metadata.Name);
+                logEntry.AddProperty("diagnostics", diagnostics.Select(d =>
                 {
-                    var logEntry = new StructuredLogEntry("codediagnostic");
-                    logEntry.AddProperty("functionName", Metadata.Name);
-                    logEntry.AddProperty("diagnostics", diagnostics.Select(d =>
+                    FileLinePositionSpan span = d.Location.GetMappedLineSpan();
+                    return new
                     {
-                        FileLinePositionSpan span = d.Location.GetMappedLineSpan();
-                        return new
-                        {
-                            code = d.Id,
-                            message = d.GetMessage(),
-                            source = Path.GetFileName(d.Location.SourceTree?.FilePath ?? span.Path ?? string.Empty),
-                            severity = d.Severity,
-                            startLineNumber = span.StartLinePosition.Line + 1,
-                            startColumn = span.StartLinePosition.Character + 1,
-                            endLine = span.EndLinePosition.Line + 1,
-                            endColumn = span.EndLinePosition.Character + 1,
-                        };
-                    }));
-
-                    return logEntry;
+                        code = d.Id,
+                        message = d.GetMessage(),
+                        source = Path.GetFileName(d.Location.SourceTree?.FilePath ?? span.Path ?? string.Empty),
+                        severity = d.Severity,
+                        startLineNumber = span.StartLinePosition.Line + 1,
+                        startColumn = span.StartLinePosition.Character + 1,
+                        endLine = span.EndLinePosition.Line + 1,
+                        endColumn = span.EndLinePosition.Character + 1,
+                    };
                 }));
+
+                _structuredLogger.LogDebug(logEntry.ToJsonLineString());
             }
         }
 
@@ -202,8 +189,6 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 if (disposing)
                 {
                     _fileChangeSubscription?.Dispose();
-
-                    FunctionLogger.Dispose();
                 }
 
                 _disposed = true;

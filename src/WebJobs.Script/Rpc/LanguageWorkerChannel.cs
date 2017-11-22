@@ -1,6 +1,13 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using Microsoft.Azure.WebJobs.Script.Description;
+using Microsoft.Azure.WebJobs.Script.Eventing;
+using Microsoft.Azure.WebJobs.Script.Eventing.Rpc;
+using Microsoft.Azure.WebJobs.Script.Grpc.Messages;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,16 +16,6 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks.Dataflow;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.WebJobs.Script.Description;
-using Microsoft.Azure.WebJobs.Script.Eventing;
-using Microsoft.Azure.WebJobs.Script.Eventing.Rpc;
-using Microsoft.Azure.WebJobs.Script.Extensions;
-using Microsoft.Azure.WebJobs.Script.Grpc.Messages;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-
 using MsgType = Microsoft.Azure.WebJobs.Script.Grpc.Messages.StreamingMessage.ContentOneofCase;
 
 namespace Microsoft.Azure.WebJobs.Script.Rpc
@@ -47,14 +44,14 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
         private IDisposable _startSubscription;
 
         private JsonSerializerSettings _verboseSerializerSettings = new JsonSerializerSettings()
-            {
-                Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore,
-                Converters = new List<JsonConverter>()
+        {
+            Formatting = Formatting.Indented,
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = new List<JsonConverter>()
                     {
                         new StringEnumConverter()
                     }
-            };
+        };
 
         private bool disposedValue;
 
@@ -293,21 +290,13 @@ namespace Microsoft.Azure.WebJobs.Script.Rpc
             if (_executingInvocations.TryGetValue(rpcLog.InvocationId, out ScriptInvocationContext context))
             {
                 // TODO - remove tracewriter
-                // logger.Log(logLevel, new EventId(0, rpcLog.EventId), rpcLog.Message, null, (state, exc) => state);
-                TraceEvent trace;
+                _logger.Log(logLevel, new EventId(0, rpcLog.EventId), rpcLog.Message, null, (state, exc) => state);
                 if (rpcLog.Exception != null)
                 {
                     var exception = new Rpc.RpcException(rpcLog.Message, rpcLog.Exception.Message, rpcLog.Exception.StackTrace);
 
-                    // trace = new TraceEvent(logLevel.ToTraceLevel(), rpcLog.Message, rpcLog.Exception.Source, exception);
-                    // context.TraceWriter.Trace(trace);
                     context.ResultSource.TrySetException(exception);
                     _executingInvocations.TryRemove(rpcLog.InvocationId, out ScriptInvocationContext _);
-                }
-                else
-                {
-                    trace = new TraceEvent(logLevel.ToTraceLevel(), rpcLog.Message);
-                    context.TraceWriter.Trace(trace);
                 }
             }
             else
