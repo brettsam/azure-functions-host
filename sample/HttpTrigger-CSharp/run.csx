@@ -2,9 +2,17 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 
-public static IActionResult Run(HttpRequest req, TraceWriter log)
+public static async Task<IActionResult> Run(HttpRequest req, TraceWriter log)
 {
+    await Task.Yield();
+
     log.Info("C# HTTP trigger function processed a request.");
+
+    using (StreamReader reader = new StreamReader(req.Body))
+    {
+        string readText = reader.ReadToEnd();
+        Console.WriteLine(readText); 
+    }
 
     if (req.Query.TryGetValue("name", out StringValues value))
     {

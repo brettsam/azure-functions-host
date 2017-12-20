@@ -7,16 +7,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Script.Description.DotNet.Compilation.CSharp.Analyzers;
 using Microsoft.Azure.WebJobs.Script.Description.DotNet.CSharp.Analyzers;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Scripting;
-using Microsoft.CodeAnalysis.Scripting.Hosting;
 
 namespace Microsoft.Azure.WebJobs.Script.Description
 {
@@ -26,7 +24,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
         // Simply getting the built in analyzers for now.
         // This should eventually be enhanced to dynamically discover/load analyzers.
-        private static ImmutableArray<DiagnosticAnalyzer> _analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new InvalidFileMetadataReferenceAnalyzer(), new AsyncVoidAnalyzer());
+        private static ImmutableArray<DiagnosticAnalyzer> _analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new InvalidFileMetadataReferenceAnalyzer(), new AsyncVoidAnalyzer(), new SyncMethodAnalyzer());
 
         public CSharpCompilation(Compilation compilation)
         {

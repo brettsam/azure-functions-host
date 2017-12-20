@@ -18,6 +18,7 @@ namespace Microsoft.Azure.WebJobs.Script.Description
         public const string InvalidFileMetadataReferenceCode = "AF006";
         public const string InvalidEntryPointNameCompilationCode = "AF007";
         public const string AsyncVoidCode = "AF008";
+        public const string UseAsyncMethod = "AF009";
 
         public static string[] FrameworkReferences = new[]
         {
