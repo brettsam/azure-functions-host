@@ -1105,7 +1105,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             Assert.True(((string)jsonContent["id"]).Length > 0);
             Assert.Equal(expectedVersion, jsonContent["version"].ToString());
             var state = (string)jsonContent["state"];
-            Assert.True(state == "Running" || state == "Created");
+            Assert.True(state == ScriptHostState.Running.ToString() || state == ScriptHostState.Initialized.ToString());
 
             // Now ensure XML content works
             request = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -1122,7 +1122,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             node = doc.Descendants(XName.Get("Id", ns)).Single();
             Assert.True(node.Value.Length > 0);
             node = doc.Descendants(XName.Get("State", ns)).Single();
-            Assert.True(node.Value == "Running" || node.Value == "Created");
+            Assert.True(node.Value == ScriptHostState.Running.ToString() || state == ScriptHostState.Initialized.ToString());
 
             node = doc.Descendants(XName.Get("Errors", ns)).Single();
             Assert.True(node.IsEmpty);
