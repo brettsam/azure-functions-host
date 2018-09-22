@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Microsoft.WebJobs.Script.Tests
@@ -42,7 +43,10 @@ namespace Microsoft.WebJobs.Script.Tests
             AddMockedSingleton<IEventGenerator>(services);
             AddMockedSingleton<AspNetCore.Hosting.IApplicationLifetime>(services);
             services.AddWebJobsScriptHostRouting();
-            services.AddLogging();
+            services.AddLogging(c =>
+            {
+                c.AddDeferred();
+            });
 
             configureRootServices?.Invoke(services);
 

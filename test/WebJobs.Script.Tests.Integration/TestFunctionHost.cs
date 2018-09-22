@@ -55,7 +55,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var builder = new WebHostBuilder()
                 .ConfigureLogging(b =>
                 {
-                    b.AddProvider(_loggerProvider);
+                    b.AddDeferred();
                 })
                 .ConfigureServices(services =>
                   {

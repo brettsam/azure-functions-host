@@ -17,6 +17,7 @@ using Microsoft.Azure.WebJobs.Script.WebHost;
 using Microsoft.Azure.WebJobs.Script.WebHost.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -323,6 +324,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                 var optionsMonitor = TestHelpers.CreateOptionsMonitor(HostOptions);
 
                 var builder = AspNetCore.WebHost.CreateDefaultBuilder()
+                    .ConfigureLogging(c => c.AddDeferred())
                    .UseStartup<Startup>()
                    .ConfigureServices(services =>
                    {

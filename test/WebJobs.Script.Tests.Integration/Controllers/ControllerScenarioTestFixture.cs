@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -72,6 +73,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Controllers
                         IsLinuxContainerEnvironment = SystemEnvironment.Instance.IsLinuxContainerEnvironment()
                     });
                 })
+                .ConfigureLogging(c => c.AddDeferred())
                 .UseStartup<Startup>()
                 .ConfigureAppConfiguration(c => c.AddEnvironmentVariables());
 

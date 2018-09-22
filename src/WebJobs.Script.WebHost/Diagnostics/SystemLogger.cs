@@ -48,10 +48,17 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
                 Utility.GetStateBoolValue(stateDict, ScriptConstants.LogPropertyIsUserLogKey) == true);
         }
 
+        private bool IsDeferredLog(IDictionary<string, object> scopeProps)
+        {
+            return scopeProps.Keys.Contains(ScriptConstants.LoggerDeferredLog);
+        }
+
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
+            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
+
             // User logs are not logged to system logs.
-            if (!IsEnabled(logLevel) || IsUserLog(state))
+            if (!IsEnabled(logLevel) || IsUserLog(state) || IsDeferredLog(scopeProps))
             {
                 return;
             }
@@ -63,8 +70,6 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost.Diagnostics
             {
                 return;
             }
-
-            IDictionary<string, object> scopeProps = DictionaryLoggerScope.GetMergedStateDictionary() ?? new Dictionary<string, object>();
 
             // Apply standard event properties
             // Note: we must be sure to default any null values to empty string
