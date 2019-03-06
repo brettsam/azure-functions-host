@@ -6,6 +6,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights.AspNetCore;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.Extensibility.Implementation.ApplicationId;
 using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +37,8 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
         private int _hostStartCount;
         private bool _disposed = false;
 
+        private IDisposable _requestTrackingModule;
+
         public WebJobsScriptHostService(IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IScriptHostBuilder scriptHostBuilder, ILoggerFactory loggerFactory, IServiceProvider rootServiceProvider,
             IServiceScopeFactory rootScopeFactory, IScriptWebHostEnvironment scriptWebHostEnvironment, IEnvironment environment,
             HostPerformanceManager hostPerformanceManager, IOptions<HostHealthMonitorOptions> healthMonitorOptions)
@@ -59,6 +64,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 _healthCheckWindow = new SlidingWindow<bool>(_healthMonitorOptions.Value.HealthCheckWindow);
                 _hostHealthCheckTimer = new Timer(OnHostHealthCheckTimer, null, TimeSpan.Zero, _healthMonitorOptions.Value.HealthCheckInterval);
             }
+
+            // Requests may come in before the JobHost has started (like during cold starts), which means
+            // they will not be properly tracked by Application Insights because there's nothing listening
+            // for them yet. This wires up the request tracking module with default values to catch those
+            // events and properly create an Activity. Once the JobHost has started, we dispose this and the
+            // JobHost tracking module takes over.
+            _requestTrackingModule = InitializeApplicationInsightsRequestTracking();
         }
 
         [Flags]
@@ -143,6 +155,13 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
                 }
 
                 LogInitialization(localHost, isOffline, attemptCount, ++_hostStartCount);
+
+                if (!_scriptWebHostEnvironment.InStandbyMode)
+                {
+                    // At this point we know that App Insights is initialized (if being used), so we
+                    // can dispose this early request tracking module, which forces our new one to take over.
+                    _requestTrackingModule?.Dispose();
+                }
 
                 await _host.StartAsync(cancellationToken);
 
@@ -416,6 +435,22 @@ namespace Microsoft.Azure.WebJobs.Script.WebHost
             {
                 instance?.Dispose();
             }
+        }
+
+        private IDisposable InitializeApplicationInsightsRequestTracking()
+        {
+            var module = new RequestTrackingTelemetryModule(new ApplicationInsightsApplicationIdProvider())
+            {
+                CollectionOptions = new RequestCollectionOptions
+                {
+                    TrackExceptions = false,
+                    EnableW3CDistributedTracing = false,
+                    InjectResponseHeaders = false
+                }
+            };
+            module.Initialize(null);
+
+            return module;
         }
 
         protected virtual void Dispose(bool disposing)
