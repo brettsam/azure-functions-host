@@ -127,8 +127,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             var coldStartLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(p => p.Category == ScriptConstants.LogCategoryHostMetrics);
             JObject coldStartData = JObject.Parse(coldStartLog.FormattedMessage);
             Assert.Equal("Dynamic", coldStartData["sku"]);
-            Assert.True((int)coldStartData["dispatchDuration"] > 0);
-            Assert.True((int)coldStartData["functionDuration"] > 0);
+
+            int dispatchDuration = (int)coldStartData["dispatchDuration"];
+            int functionDuration = (int)coldStartData["functionDuration"];
+
+            Assert.True(dispatchDuration > 0, $"Expected {nameof(dispatchDuration)} > 0; Actual:{Environment.NewLine}{coldStartData}");
+            Assert.True(functionDuration > 0, $"Expected {nameof(functionDuration)} > 0; Actual:{Environment.NewLine}{coldStartData}");
 
             // Verify that the internal cache has reset
             Assert.NotSame(GetCachedTimeZoneInfo(), _originalTimeZoneInfoCache);
